@@ -4,7 +4,7 @@
 > Build a showcase called "Jelly Island". Like the 3D showcases on the web, using libraries and web technologies only. A showcase sits at the centre that you can view and rotate around. Inside it are an island and an ocean with moving waves, but the ocean behaves like **jelly** when the user interacts with the showcase (rotating around or clicking). The island has some coconut trees and some people sunbathing and playing beach volleyball. The island and the coconut trees jiggle slightly with the user's interaction too, but **not the people**. Add some swimming fish in the ocean, and make them **scared when the sea is moving aggressively**. Create a folder under `~/projects/personal`, create a **private** GitHub repo with the `gh` CLI and push. Document everything so other agents can reproduce it.
 
 ## 2. Build recipe (what was done, in order)
-1. `npm init`, add `three@~0.170.0`, `vite@^6`, dev `playwright-core`. Vite config with `base: './'`.
+1. `npm init`, add `three@~0.170.0`, `vite@^8`, dev `playwright-core`. Vite config with `base: './'`.
 2. `index.html` (canvas + title + controls panel + hint + debug `<pre>`), `src/style.css` (CSS gradient backdrop, `alpha:true` renderer).
 3. `src/config.js` constants; `src/sim/spring.js`, `islandShape.js`, `waveGrid.js` (pure JS) + `tests/sim.test.js`. Run `npm test`.
 4. Calibrate wave strengths and fear thresholds with a node script (see ARCHITECTURE#calibration). Do this *before* writing the visuals; peak heights must stay < ~0.5 or the sea escapes the case.
@@ -32,4 +32,4 @@ Look at `smoke-output/*.png`: the island with palms, players and sunbathers shou
 - **Person pose:** lying figures rotate the whole person group `-PI/2` about X (head toward -Z, facing up).
 
 ## 5. Environment this was built in
-macOS arm64, Node 24 (Linux VM shell reported Node 22), npm 10, three 0.170.0, vite 6.4.x. Browser checks ran in headless Chromium (software GL).
+macOS arm64, Node 24 (Linux VM shell reported Node 22), npm 10, three 0.170.0, vite 8.3.x. Browser checks ran in headless Chromium (software GL).

@@ -1,7 +1,7 @@
 # Architecture
 
 ## Stack
-three.js 0.170 (pinned `~0.170.0`), Vite 6, plain ES modules. No framework, no assets. Dev-only: `playwright-core` for the smoke test.
+three.js 0.170 (pinned `~0.170.0`), Vite 8, plain ES modules. No framework, no assets. Dev-only: `playwright-core` for the smoke test.
 
 ## Coordinate system and dimensions (`src/config.js`)
 - Y is up. Sea level `y = 0`. Seabed `y = -2.4`. Water box spans `x, z in [-5, 5]`.

@@ -10,7 +10,7 @@ poke. Inside it, an island sits in an ocean that **behaves like jelly** whenever
 - **Beach life** – two sunbathers (towels, sunglasses, a beach umbrella) and a 2v2 beach-volleyball rally.
 - **Fish** – a school of colourful fish. When the sea moves aggressively they panic: speed up, dive, bulge
   their eyes, pale, and flee toward the island's flanks. They relax again as the water calms.
-- **Only web tech**: [three.js](https://threejs.org) + [Vite](https://vite.dev). No image/model assets: every
+- **Only web tech**: [three.js](https://threejs.org) + [Vite 8](https://vite.dev). No image/model assets: every
   texture is drawn on a canvas and every model is built from primitives in code.
 
 | Close-up | Top-down after a click |
@@ -19,7 +19,7 @@ poke. Inside it, an island sits in an ocean that **behaves like jelly** whenever
 
 ## Quick start
 
-Requires Node 20+ (developed on Node 22/24).
+Requires Node 20.19+ or 22.12+ (Vite 8 requirement; developed on Node 22/24).
 
 ```bash
 npm install
