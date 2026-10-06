@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jelly Island</title>
+    <meta name="description" content="A jiggly 3D island showcase: a jelly ocean, wobbly palms, beach life and skittish fish." />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="stage" aria-label="Interactive 3D showcase of Jelly Island"></canvas>
+
+    <header class="title">
+      <h1>Jelly Island</h1>
+      <p>a tiny paradise in a glass case</p>
+    </header>
+
+    <aside class="panel" aria-label="Controls">
+      <label>
+        Jelliness
+        <input id="ctl-jelly" type="range" min="0" max="2" step="0.05" value="1" />
+      </label>
+      <label class="check">
+        <input id="ctl-rotate" type="checkbox" />
+        Auto-rotate
+      </label>
+    </aside>
+
+    <p class="hint">Drag to orbit &middot; scroll to zoom &middot; click the sea, the island or the palms</p>
+    <pre id="debug" hidden></pre>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
