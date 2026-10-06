@@ -20,8 +20,13 @@ const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+page.setDefaultTimeout(180000); // software GL can take seconds per frame
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+const warnings = [];
+page.on('console', (m) => {
+  if (m.type() === 'error') errors.push(m.text());
+  if (m.type() === 'warning' && /THREE|deprecated|removed/i.test(m.text())) warnings.push(m.text());
+});
 page.on('pageerror', (e) => errors.push(String(e)));
 
 await page.goto(`${URL}/?debug=1`, { waitUntil: 'load' });
@@ -63,9 +68,11 @@ check('island squash responds to poke', Math.abs(isl.islandSquash) > 0.005, `squ
 check('palms bend after poke', isl.palmBend.some((b) => b > 0.01), isl.palmBend.map((b) => b.toFixed(3)).join(','));
 const structure = await page.evaluate(() => {
   const J = window.__JELLY__;
-  return { islandHasChildren: J.island.mesh.children.length, peopleParentIsScene: J.people.group.parent === J.scene, peopleCount: J.people.group.children.length };
+  let peopleUnderIsland = false;
+  J.island.mesh.traverse((o) => { if (o === J.people.group) peopleUnderIsland = true; });
+  return { peopleUnderIsland, peopleParentIsScene: J.people.group.parent === J.scene, peopleCount: J.people.group.children.length };
 });
-check('people are not parented to the jiggling island', structure.islandHasChildren === 0 && structure.peopleParentIsScene && structure.peopleCount > 0, JSON.stringify(structure));
+check('people are not parented to the jiggling island', !structure.peopleUnderIsland && structure.peopleParentIsScene && structure.peopleCount > 0, JSON.stringify(structure));
 
 await advance(14);
 const calm = await state();
@@ -83,5 +90,6 @@ check('orbiting registers as rotation', rot.rotationSpeed > 0.3, `rot=${rot.rota
 
 await wait(1000);
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+check('no three.js deprecation warnings', warnings.length === 0, warnings.slice(0, 3).join(' | '));
 await browser.close();
 process.exit(results.every((r) => r.ok) ? 0 : 1);

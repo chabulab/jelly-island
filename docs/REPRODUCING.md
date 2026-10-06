@@ -18,7 +18,7 @@
 npm install && npm test && npm run build
 npx playwright-core install chromium          # once, for the smoke test
 npm run preview &                              # serves dist on :4273
-npm run smoke                                  # expects 13 PASS; screenshots in smoke-output/
+npm run smoke                                  # expects 14 PASS; screenshots in smoke-output/
 ```
 Look at `smoke-output/*.png`: the island with palms, players and sunbathers should be visible, the click screenshot should show a dent/ripples in the sea, and `fish fear` in the debug panel should be near 1.00 right after a click.
 
@@ -29,6 +29,10 @@ Look at `smoke-output/*.png`: the island with palms, players and sunbathers shou
 - **`node --test tests/`** fails on Node 22 (treats the dir as a module); the script uses `tests/*.test.js`.
 - **Glass:** keep `depthWrite: false` and set `renderOrder`, or the water/fish vanish behind it.
 - **Shadows:** glass and water must not cast shadows (they don't set `castShadow`).
+- **Hollow height fields:** a height-field island seen through transparent walls exposes its empty underside. Close it with side skirts down to the seabed, and keep any jiggle at 0 near the walls.
+- **Draw calls:** dozens of tiny single-colour meshes add up fast (people, props, fish). Bake static parts with `util/bake.js`.
+- **fps readout:** count real elapsed time, not the clamped physics `dt` (an earlier version always showed >= 20 fps).
+- **three r186:** `PCFSoftShadowMap` removed, `Clock` deprecated. The smoke test fails on three.js deprecation warnings so upgrades surface them.
 - **Person pose:** lying figures rotate the whole person group `-PI/2` about X (head toward -Z, facing up).
 
 ## 5. Environment this was built in

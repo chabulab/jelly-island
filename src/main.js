@@ -9,6 +9,7 @@ import { Island } from './world/island.js';
 import { Palms } from './world/palms.js';
 import { createPeople } from './world/people.js';
 import { FishSchool } from './world/fish.js';
+import { Props } from './world/props.js';
 
 const canvas = document.getElementById('stage');
 const params = new URLSearchParams(location.search);
@@ -18,7 +19,7 @@ const DEBUG = params.has('debug');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap; // (PCFSoftShadowMap was removed in r186; use shadow.radius)
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -51,7 +52,11 @@ sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
+sun.shadow.radius = 3;
 scene.add(sun);
+const fill = new THREE.DirectionalLight(0xcfe6ff, 0.55); // cool bounce light from the opposite side, no shadows
+fill.position.set(-8, 5, -6);
+scene.add(fill);
 
 // ------------------------------------------------------------------ world
 const jelly = new JellyState();
@@ -61,7 +66,8 @@ const island = new Island(jelly);
 const palms = new Palms(jelly);
 const people = createPeople();
 const fish = new FishSchool(jelly, ocean);
-scene.add(showcase, island.mesh, ocean.mesh, palms.group, people.group, fish.group);
+const props = new Props(jelly);
+scene.add(showcase, island.mesh, ocean.mesh, palms.group, people.group, fish.group, props.group);
 
 // ------------------------------------------------------------------ interaction
 const raycaster = new THREE.Raycaster();
@@ -116,14 +122,16 @@ window.addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ loop
-const clock = new THREE.Clock();
+const timer = new THREE.Timer(); // (THREE.Clock is deprecated since r183)
 const debugEl = document.getElementById('debug');
 if (DEBUG) debugEl.hidden = false;
 let frames = 0, fpsT = 0, fps = 0, simTime = 0;
 
-function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const t = clock.elapsedTime;
+function frame(now) {
+  timer.update(now);
+  const rawDt = timer.getDelta();
+  const dt = Math.min(rawDt, 0.05);
+  const t = timer.getElapsed();
   simTime = t;
 
   controls.update();
@@ -133,9 +141,10 @@ function frame() {
   palms.update(dt, t);
   people.update(t);
   fish.update(dt, t);
+  props.update(dt, t);
   renderer.render(scene, camera);
 
-  frames++; fpsT += dt;
+  frames++; fpsT += rawDt; // real time (dt is clamped for the physics)
   if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; }
   if (DEBUG) {
     debugEl.textContent =
@@ -148,12 +157,12 @@ function frame() {
 // Test / agent hook: lets scripts/smoke-test.mjs and other agents drive and inspect the scene.
 window.__JELLY__ = {
   ready: true,
-  THREE, scene, camera, controls, jelly, ocean, island, palms, fish, people,
+  THREE, renderer, scene, camera, controls, jelly, ocean, island, palms, fish, people, props,
   /** Advance the simulation `seconds` without rendering (deterministic tests; slow software GL can't keep real time). */
   advance(seconds, step = 1 / 60) {
     for (let i = 0; i < Math.round(seconds / step); i++) {
       simTime += step;
-      ocean.update(step, simTime); island.update(step); palms.update(step, simTime); people.update(simTime); fish.update(step, simTime);
+      ocean.update(step, simTime); island.update(step); palms.update(step, simTime); people.update(simTime); fish.update(step, simTime); props.update(step, simTime);
     }
   },
   poke,                                   // poke(clientX, clientY) => {kind, point}

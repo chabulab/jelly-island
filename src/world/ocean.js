@@ -100,6 +100,7 @@ export class Ocean {
     const gain = 0.55 + 0.45 * strength; // keep a visible response even at low jelliness
     const sim = strength <= 0 ? 0 : gain;
     const col = this.colorAttr;
+    const cl = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
     for (let i = 0; i < this.count; i++) {
       const x = this.baseX[i], z = this.baseZ[i];
       const idle =
@@ -110,7 +111,7 @@ export class Ocean {
       pos.setY(i, y);
       // crests catch light, troughs darken: sells the gelatin look
       const k = THREE.MathUtils.clamp(y * 0.9, -0.25, 0.35);
-      col.setXYZ(i, this.baseColor[i * 3] + k, this.baseColor[i * 3 + 1] + k, this.baseColor[i * 3 + 2] + k * 0.6);
+      col.setXYZ(i, cl(this.baseColor[i * 3] + k), cl(this.baseColor[i * 3 + 1] + k), cl(this.baseColor[i * 3 + 2] + k * 0.6));
     }
     pos.needsUpdate = true;
     col.needsUpdate = true;

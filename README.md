@@ -13,9 +13,13 @@ poke. Inside it, an island sits in an ocean that **behaves like jelly** whenever
 - **Only web tech**: [three.js](https://threejs.org) + [Vite 8](https://vite.dev). No image/model assets: every
   texture is drawn on a canvas and every model is built from primitives in code.
 
-| Close-up | Top-down after a click |
+| The showcase | On the beach |
 | --- | --- |
-| ![closeup](docs/screenshots/closeup.png) | ![top-down](docs/screenshots/top-down-ripple.png) |
+| ![overview](docs/screenshots/overview.png) | ![beach](docs/screenshots/beach.png) |
+
+| Cut-away side view (the island is solid down to the seabed) | Under the sea |
+| --- | --- |
+| ![side](docs/screenshots/side.png) | ![underwater](docs/screenshots/underwater.png) |
 
 ## Quick start
 
@@ -48,7 +52,8 @@ npm run smoke      # headless-browser end-to-end check (needs `npm run preview` 
 | `src/main.js` | Renderer, scene, lights, camera, input, UI wiring, main loop, `window.__JELLY__` test hook |
 | `src/config.js` | **All tuning constants** (dimensions, wave physics, fish fear thresholds) |
 | `src/sim/` | Pure JS, no three.js: `spring.js`, `waveGrid.js` (water physics), `islandShape.js` (height field + layout), `jellyState.js` (shared interaction state) |
-| `src/world/` | Scene objects: `showcase.js`, `ocean.js`, `island.js`, `palms.js`, `people.js`, `fish.js` |
+| `src/world/` | Scene objects: `showcase.js`, `ocean.js`, `island.js`, `palms.js`, `people.js`, `fish.js`, `props.js` (rocks, grass, bushes, shells, sandcastle, corals, seaweed) |
+| `src/util/` | `bake.js` (merge static meshes into one draw call), `rng.js` (seeded random) |
 | `src/fx/textures.js` | Canvas-drawn textures |
 | `tests/` | `node --test` unit tests for `src/sim` |
 | `scripts/smoke-test.mjs` | Playwright end-to-end check |

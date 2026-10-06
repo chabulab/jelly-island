@@ -19,6 +19,9 @@ export function islandHeight(x, z) {
   const g = Math.max(0, 1 - (r / R) ** 2);
   let h = CASE.floorY + 3.4 * Math.pow(g, 0.8) + bump(x, z) * 0.12 * Math.min(1, g * 3);
   if (h > PLATEAU) h = PLATEAU + (h - PLATEAU) * 0.25; // flatten the top
+  // wave-made sand ripples on the underwater slopes (fade out toward the beach and the seabed floor)
+  const under = Math.min(1, Math.max(0, (-0.35 - h) / 0.5)) * Math.min(1, Math.max(0, (h - CASE.floorY) / 0.3));
+  if (under > 0) h += under * 0.022 * Math.sin(x * 5.3 + z * 2.1 + Math.sin(z * 1.7) * 1.4);
   return Math.max(h, CASE.floorY);
 }
 

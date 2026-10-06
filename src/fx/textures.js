@@ -64,3 +64,40 @@ export function streakTexture() {
   g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
   return tex(c);
 }
+
+/** Lacquered wood grain for the pedestal: long straight-ish fibres + a few broad colour bands. */
+export function woodTexture() {
+  const [c, g] = canvas(512, 512);
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  // broad bands
+  for (let x = 0; x < 512; x += 4) {
+    const v = 0.5 + 0.5 * Math.sin(x * 0.045) * Math.sin(x * 0.013 + 1.3);
+    g.fillStyle = `rgb(${Math.round(98 + v * 26)},${Math.round(62 + v * 18)},${Math.round(38 + v * 10)})`;
+    g.fillRect(x, 0, 4, 512);
+  }
+  // fibres: long, nearly straight, very gentle drift
+  for (let i = 0; i < 420; i++) {
+    const x0 = rnd() * 512, drift = (rnd() - 0.5) * 10, ph = rnd() * 6.28;
+    g.strokeStyle = `rgba(${rnd() < 0.6 ? '45,25,14' : '160,112,72'},${0.05 + rnd() * 0.16})`;
+    g.lineWidth = 0.5 + rnd() * 1.6;
+    g.beginPath();
+    for (let y = -8; y <= 520; y += 8) {
+      const x = x0 + drift * (y / 512) + Math.sin(y * 0.006 + ph) * 2.2;
+      y < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  return tex(c, { repeat: [1, 1] });
+}
+
+/** Soft radial blob used as a contact shadow under the pedestal. */
+export function blobShadowTexture() {
+  const [c, g] = canvas(256, 256);
+  const grd = g.createRadialGradient(128, 128, 30, 128, 128, 128);
+  grd.addColorStop(0, 'rgba(10,40,60,0.55)');
+  grd.addColorStop(0.55, 'rgba(10,40,60,0.22)');
+  grd.addColorStop(1, 'rgba(10,40,60,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  return tex(c, { srgb: false });
+}
