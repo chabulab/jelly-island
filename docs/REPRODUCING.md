@@ -17,7 +17,7 @@
 ```bash
 npm install && npm test && npm run build
 npx playwright-core install chromium          # once, for the smoke test
-npm run preview &                              # serves dist on :4173
+npm run preview &                              # serves dist on :4273
 npm run smoke                                  # expects 13 PASS; screenshots in smoke-output/
 ```
 Look at `smoke-output/*.png`: the island with palms, players and sunbathers should be visible, the click screenshot should show a dent/ripples in the sea, and `fish fear` in the debug panel should be near 1.00 right after a click.

@@ -3,7 +3,7 @@
 Read `README.md`, then `docs/ARCHITECTURE.md`. Short version:
 
 ## Commands
-- `npm install` · `npm run dev` · `npm run build` · `npm test` (pure sim tests) · `npm run smoke` (browser E2E, needs a server on :4173).
+- `npm install` · `npm run dev` · `npm run build` · `npm test` (pure sim tests) · `npm run smoke` (browser E2E, needs a server on :4273).
 
 ## Rules
 0. **Always use the latest stable version of every dependency** (owner's standing preference). Before adding or touching deps run `npm view <pkg> version` / `npm outdated`, install `@latest`, then `npm test && npm run build && npm run smoke`. Currently: three 0.186.x, vite 8.x, playwright-core 1.63.x.

@@ -23,12 +23,12 @@ Requires Node 20.19+ or 22.12+ (Vite 8 requirement; developed on Node 22/24).
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5273
 ```
 
 ```bash
 npm run build      # production bundle in dist/ (relative base, host anywhere)
-npm run preview    # serve dist/ on http://localhost:4173
+npm run preview    # serve dist/ on http://localhost:4273
 npm test           # unit tests for the pure simulation code (no browser needed)
 npm run smoke      # headless-browser end-to-end check (needs `npm run preview` running, see docs/REPRODUCING.md)
 ```

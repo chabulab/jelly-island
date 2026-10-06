@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Headless smoke test. Starts nothing itself: run `npm run dev` or `npm run preview` first
- * (default URL http://localhost:4173, override with URL=...).
+ * (default URL http://localhost:4273, override with URL=...).
  *
  * Browser: uses system Chrome (playwright-core channel "chrome") unless CHROME_PATH is set.
  * Checks: page loads with no console errors, scene exposes window.__JELLY__, clicking the sea raises
@@ -10,7 +10,7 @@
 import { chromium } from 'playwright-core';
 import { mkdirSync } from 'node:fs';
 
-const URL = process.env.URL ?? 'http://localhost:4173';
+const URL = process.env.URL ?? 'http://localhost:4273';
 const out = 'smoke-output';
 mkdirSync(out, { recursive: true });
 
