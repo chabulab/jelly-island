@@ -151,43 +151,103 @@ resize();
 const timer = new THREE.Timer(); // (THREE.Clock is deprecated since r183)
 const debugEl = document.getElementById('debug');
 if (DEBUG) debugEl.hidden = false;
-let frames = 0, fpsT = 0, fps = 0, simTime = 0;
+let frames = 0, fpsT = 0, fps = 0, simTime = 0, advanced = 0; // `advanced`: time added by __JELLY__.advance()
+
+let frameErrors = 0, lastFrameError = null;
 
 function frame(now) {
-  timer.update(now);
-  const rawDt = timer.getDelta();
-  const dt = Math.min(rawDt, 0.05);
-  const t = timer.getElapsed();
-  simTime = t;
+  // Never let one bad frame kill the loop: an exception here used to stop requestAnimationFrame for good,
+  // which looks exactly like a frozen app. Log the first error, count the rest, keep animating.
+  try {
+    timer.update(now);
+    // rAF timestamps can be slightly EARLIER than performance.now() taken by an earlier manual call, which made
+    // the first delta negative and time run backwards (that crashed the volleyball rally and froze the app).
+    const rawDt = Math.max(0, timer.getDelta());
+    const dt = Math.min(rawDt, 0.05);
+    simTime = Math.max(simTime, timer.getElapsed() + advanced); // never runs backwards
+    const t = simTime;
 
-  controls.update();
-  jelly.update(dt, camera, controls.target);
-  ocean.update(dt, t);
-  island.update(dt);
-  palms.update(dt, t);
-  people.update(t);
-  fish.update(dt, t);
-  props.update(dt, t);
-  renderer.render(scene, camera);
+    controls.update();
+    jelly.update(dt, camera, controls.target);
+    ocean.update(dt, t);
+    island.update(dt);
+    palms.update(dt, t);
+    people.update(t);
+    fish.update(dt, t);
+    props.update(dt, t);
+    renderer.render(scene, camera);
 
-  frames++; fpsT += rawDt; // real time (dt is clamped for the physics)
-  if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; }
-  if (DEBUG) {
-    debugEl.textContent =
-      `fps ${fps.toFixed(0)}  rot ${jelly.rotationSpeed.toFixed(2)} rad/s\n` +
-      `sea activity ${ocean.agitation.toFixed(4)}  fish fear ${fish.fear.toFixed(2)}`;
+    frames++; fpsT += rawDt; // real time (dt is clamped for the physics)
+    if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; }
+    if (DEBUG) {
+      debugEl.textContent =
+        `fps ${fps.toFixed(0)}  rot ${jelly.rotationSpeed.toFixed(2)} rad/s\n` +
+        `sea activity ${ocean.agitation.toFixed(4)}  fish fear ${fish.fear.toFixed(2)}` +
+        (frameErrors ? `\nframe errors ${frameErrors}: ${lastFrameError}` : '');
+    }
+  } catch (err) {
+    if (frameErrors++ === 0) console.error('[jelly-island] frame error (loop keeps running):', err);
+    lastFrameError = String(err?.message ?? err);
   }
-  requestAnimationFrame(frame);
+}
+
+// ------------------------------------------------------------------ start-up, GPU context lifecycle
+// 1. Compile every shader BEFORE the first frame, asynchronously where the browser supports it
+//    (KHR_parallel_shader_compile). A synchronous first-frame compile of ~28 programs blocked the main thread.
+// 2. Release the WebGL context when the page goes away (refresh/close). Otherwise the old context can linger
+//    while the new page creates its own, and on refresh the GPU process may hand out a lost/stalled context.
+// 3. If the context is lost anyway, show a notice, try to restore, and reload automatically if it doesn't come back.
+const overlay = document.getElementById('loading');
+const showOverlay = (text) => { overlay.textContent = text; overlay.hidden = false; };
+const hideOverlay = () => { overlay.hidden = true; };
+let unloading = false, lostTimer = 0;
+
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault(); // allow the browser to restore it
+  renderer.setAnimationLoop(null);
+  if (unloading) return;
+  console.warn('[jelly-island] WebGL context lost; waiting for restore');
+  showOverlay('Restoring graphics…');
+  lostTimer = setTimeout(() => location.reload(), 4000);
+});
+canvas.addEventListener('webglcontextrestored', () => {
+  clearTimeout(lostTimer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; // render-target content is gone after a loss
+  hideOverlay();
+  renderer.setAnimationLoop(frame);
+});
+window.addEventListener('pagehide', () => {
+  unloading = true;
+  renderer.setAnimationLoop(null);
+  renderer.dispose();
+  renderer.forceContextLoss();
+});
+// back/forward cache: the context was released on pagehide, so rebuild cleanly
+window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
+
+async function start() {
+  showOverlay('Building the island…');
+  try {
+    // parallel (non-blocking) compile where the GPU supports it, plain compile otherwise (software GL)
+    if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera);
+    else renderer.compile(scene, camera);
+  } catch (err) {
+    console.warn('[jelly-island] async shader compile unavailable, compiling on first frame', err);
+  }
+  hideOverlay();
+  window.__JELLY__.ready = true;
+  renderer.setAnimationLoop(frame);
 }
 
 // Test / agent hook: lets scripts/smoke-test.mjs and other agents drive and inspect the scene.
 window.__JELLY__ = {
-  ready: true,
+  ready: false, // set by start() once shaders are compiled and the loop is running
   THREE, islandHeight, renderer, scene, camera, controls, jelly, ocean, island, palms, fish, people, props,
   /** Advance the simulation `seconds` without rendering (deterministic tests; slow software GL can't keep real time). */
   advance(seconds, step = 1 / 60) {
     for (let i = 0; i < Math.round(seconds / step); i++) {
       simTime += step;
+      advanced += step;
       ocean.update(step, simTime); island.update(step); palms.update(step, simTime); people.update(simTime); fish.update(step, simTime); props.update(step, simTime);
     }
   },
@@ -196,9 +256,9 @@ window.__JELLY__ = {
   poke,                                   // poke(clientX, clientY) => {kind, point}
   pokeWorld: (x, y, z, kind = 'ocean', s = 1) => jelly.impulse(new THREE.Vector3(x, y, z), s, kind, null),
   state: () => ({
-    fps, rotationSpeed: jelly.rotationSpeed, seaActivity: ocean.agitation, fishFear: fish.fear,
+    fps, frameErrors, contextLost: renderer.getContext().isContextLost(), rotationSpeed: jelly.rotationSpeed, seaActivity: ocean.agitation, fishFear: fish.fear,
     maxWave: ocean.grid.maxAbsHeight(),
     islandSquash: island.py.x, palmBend: palms.palms.map((p) => Math.hypot(p.bx.x, p.bz.x)),
   }),
 };
-frame();
+start();

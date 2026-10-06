@@ -282,9 +282,10 @@ export function createPeople() {
   const { clamp, lerp } = THREE.MathUtils;
   actors.push({
     update(t) {
+      t = Math.max(0, t);                        // never index the rally with negative time (see main.js timer note)
       const leg = Math.floor(t / FLIGHT);
       const ph = (t % FLIGHT) / FLIGHT;          // 0..1 within the flight
-      const from = leg % 2;                      // side that just hit
+      const from = ((leg % 2) + 2) % 2;          // side that just hit (safe modulo, always 0 or 1)
       const to = 1 - from;
       const hitterFrom = sides[from][0], hitterTo = sides[to][0];
 

@@ -36,6 +36,7 @@ npm run preview    # serve dist/ on http://localhost:4273
 npm test           # unit tests for the pure simulation code (no browser needed)
 npm run qa:views   # render the QA camera set to qa-output/ (see docs/VISUAL-QA.md)
 npm run qa:perf    # draw calls, triangles, CPU/GPU cost per scene group
+npm run qa:reload  # refresh the page many times; every load must become ready and keep animating
 npm run smoke      # headless-browser end-to-end check (needs `npm run preview` running, see docs/REPRODUCING.md)
 ```
 

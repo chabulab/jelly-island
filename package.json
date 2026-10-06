@@ -11,7 +11,8 @@
     "test": "node --test tests/*.test.js",
     "smoke": "node scripts/smoke-test.mjs",
     "qa:views": "node scripts/views.mjs",
-    "qa:perf": "node scripts/perf-probe.mjs"
+    "qa:perf": "node scripts/perf-probe.mjs",
+    "qa:reload": "node scripts/reload-stress.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

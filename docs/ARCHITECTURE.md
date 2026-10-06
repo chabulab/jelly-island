@@ -20,6 +20,12 @@ fish.update(dt, t)           // steering + fear
 props.update(dt, t)          // seaweed sway (with slosh), sandcastle flag
 render
 ```
+Loop details (`src/main.js`):
+- `start()` first awaits `renderer.compileAsync(scene, camera)` (parallel shader compile, "Building the island…" overlay), then sets `__JELLY__.ready = true` and starts `renderer.setAnimationLoop(frame)`.
+- Time is **monotonic**: negative timer deltas are clamped to 0 and `simTime` never decreases. (rAF timestamps can be earlier than a `performance.now()` read just before; negative time once crashed the volleyball rally and froze the app on refresh.)
+- `frame()` is wrapped in try/catch: an exception is logged once and counted (`state().frameErrors`), the loop keeps running.
+- GPU context lifecycle: on `pagehide` the renderer is disposed and the context released (`forceContextLoss`); on `webglcontextlost` the loop pauses with a "Restoring graphics…" notice, restores on `webglcontextrestored` (re-generating the PMREM environment) or reloads after 4 s; a page restored from the back/forward cache reloads.
+
 Click handling: `pointerdown/up` (moved < 6px and < 450 ms = click) -> raycast against ocean, island, palms ->
 `jelly.impulse(point, strength, kind, object)`.
 
@@ -100,4 +106,5 @@ So `FEAR.calm = 0.0003`, `FEAR.panic = 0.0014`. If you change `WAVE.*` or ripple
 
 ## Testing
 - `npm test` - Node tests: spring settles, island shape sanity, click scares fish then decays, solid cells pinned, and containment (every prop and palm mesh inside the water box).
-- `npm run smoke` - Chromium E2E, 17 checks (incl. fish start in open water, colour pickers recolour + reset, everything inside the glass case): loads without console errors or three.js deprecation warnings, click on open water hits the ocean, activity/fear rise and decay, wave height sane, island squashes, palms bend, people not under the island in the scene graph, orbit registers. Writes `smoke-output/*.png`.
+- `npm run qa:reload` - refreshes the page N times (some mid-startup) and checks each load becomes ready and keeps animating with no frame errors or context loss.
+- `npm run smoke` - Chromium E2E, 18 checks (incl. animation survives negative time, fish start in open water, colour pickers recolour + reset, everything inside the glass case): loads without console errors or three.js deprecation warnings, click on open water hits the ocean, activity/fear rise and decay, wave height sane, island squashes, palms bend, people not under the island in the scene graph, orbit registers. Writes `smoke-output/*.png`.

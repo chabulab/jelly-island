@@ -73,7 +73,9 @@ Each view exists to expose a specific class of problem. Users can't reach some o
 - Accessories must match the pose (a hat on a lying head becomes a vertical disc: move it to the sand).
 - Interacting things must line up (ball hits hands at the hitter's hand height, feet under the body when knees bend).
 
-**Runtime health** (from the console and the smoke test)
+**Runtime health** (from the console, the smoke test and `npm run qa:reload`)
+- Reload the page many times, including immediately after a reload. Every load must become ready and keep animating: "works on the first try" hides timing bugs. On a real GPU you can also do this by hand with `?debug=1` and watch the fps line.
+- A page that renders but stops moving = the animation loop died: check the console for an exception inside `frame()` (now caught and counted in `state().frameErrors`).
 - Any console error (e.g. `computeBoundingSphere(): radius is NaN` = NaN in a position buffer, usually `pow()` of a tiny negative number).
 - three.js deprecation / removal warnings after upgrades (the smoke test fails on them).
 - Debug readouts that cannot be right (an fps that never drops below 20 was computed from clamped dt).
@@ -114,5 +116,6 @@ under ~5 ms. On software GL compare the *relative* numbers only.
 | Warnings after the three r186 upgrade | console | `PCFSoftShadowMap` removed, `Clock` deprecated | `PCFShadowMap` + radius, `THREE.Timer`; smoke test now fails on such warnings |
 | ~820 meshes after adding detail | perf-probe | many tiny single-colour meshes | `util/bake.js` -> ~360 meshes |
 | fps readout always >= 20 | debug panel | fps computed from clamped physics dt | use real elapsed time |
+| App froze on some refreshes; reloading a few times fixed it (reported by the owner) | real GPU, repeated reloads (`npm run qa:reload` / built-in browser with `?debug=1`) | first `frame()` was called by hand, then rAF passed an earlier timestamp: negative time -> rally index `-1 % 2 = -1` -> `sides[-1][0]` threw -> loop stopped | clamp dt >= 0, monotonic time, safe modulo; loop wrapped in try/catch; `setAnimationLoop` after `compileAsync`; context released on pagehide and restored/reloaded on loss; smoke check + reload stress script |
 | Seashells / starfish / corals half outside the case (reported by the owner) | corner, side | `radiusAtLevel()` returned the wall radius when the island never reached the wanted depth in that direction | placement retries other angles and keeps a margin from the glass; containment unit test + smoke check |
 | Fish on the island at load, sliding down into the sea | first seconds after load (reported by the owner) | spawn ring overlapped the island; the ground clamp then pushed them onto the sand | seeded rejection sampling in open water; smoke check "fish start in open water" |

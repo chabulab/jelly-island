@@ -124,6 +124,14 @@ const outside = await page.evaluate(() => {
 });
 check('everything stays inside the glass case', outside.length === 0, outside.slice(0, 5).join(', '));
 
+// the animation loop must survive odd clock values (negative time once froze the app on refresh)
+const robust = await page.evaluate(() => {
+  const J = window.__JELLY__;
+  try { J.people.update(-0.4); J.people.update(-1.9); } catch (e) { return String(e); }
+  return J.state().frameErrors === 0 ? 'ok' : 'frame errors: ' + J.state().frameErrors;
+});
+check('animation survives negative time, no frame errors', robust === 'ok', robust);
+
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 check('no three.js deprecation warnings', warnings.length === 0, warnings.slice(0, 3).join(' | '));
 await browser.close();

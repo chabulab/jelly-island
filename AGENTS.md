@@ -16,8 +16,9 @@ Read `README.md`, then `docs/ARCHITECTURE.md`. Short version:
 7. Verify visually, not just by build success: follow `docs/VISUAL-QA.md` (render `npm run qa:views`, inspect each view against its checklist, fix, re-render, then `npm run smoke` and `npm run qa:perf`). Add new findings to its case log.
 8. **Keep draw calls low.** Build detailed props from primitives, then merge static parts with `bake()` from `src/util/bake.js` (`deep: false` inside animation rigs). Use `InstancedMesh` for many identical things (see grass tufts).
 9. **No hollow geometry behind glass, nothing through the glass.** Anything visible through the water walls must be closed (see the island skirt); jiggle fades to 0 at the walls. Place props with `spotAtLevel()` / `insideCase()`; `tests/containment.test.js` fails if any mesh crosses the water box.
-10. **Seeded randomness only** (`src/util/rng.js`) for layouts, so every load looks the same and screenshots are comparable.
-11. Keep docs in sync: if behaviour or constants change, update `docs/ARCHITECTURE.md` in the same commit.
+10. **The loop must never die.** Clamp time deltas to >= 0, keep time monotonic, use a safe modulo (`((n % m) + m) % m`) for anything indexed by time, and don't remove the try/catch in `frame()`. Run `npm run qa:reload` after touching start-up or timing code.
+11. **Seeded randomness only** (`src/util/rng.js`) for layouts, so every load looks the same and screenshots are comparable.
+12. Keep docs in sync: if behaviour or constants change, update `docs/ARCHITECTURE.md` in the same commit.
 
 ## Agent hook
 The page exposes `window.__JELLY__` (`state()`, `advance(seconds)`, `poke(x,y)`, `pokeWorld(x,y,z,kind)`, plus the live scene objects). Use `advance()` for deterministic time-based checks; software-rendered browsers run at a few fps.
