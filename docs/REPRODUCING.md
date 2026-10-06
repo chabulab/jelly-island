@@ -4,7 +4,7 @@
 > Build a showcase called "Jelly Island". Like the 3D showcases on the web, using libraries and web technologies only. A showcase sits at the centre that you can view and rotate around. Inside it are an island and an ocean with moving waves, but the ocean behaves like **jelly** when the user interacts with the showcase (rotating around or clicking). The island has some coconut trees and some people sunbathing and playing beach volleyball. The island and the coconut trees jiggle slightly with the user's interaction too, but **not the people**. Add some swimming fish in the ocean, and make them **scared when the sea is moving aggressively**. Create a folder under `~/projects/personal`, create a **private** GitHub repo with the `gh` CLI and push. Document everything so other agents can reproduce it.
 
 ## 2. Build recipe (what was done, in order)
-1. `npm init`, add `three@~0.170.0`, `vite@^8`, dev `playwright-core`. Vite config with `base: './'`.
+1. `npm init`, add `three@latest`, `vite@latest`, dev `playwright-core`. Vite config with `base: './'`.
 2. `index.html` (canvas + title + controls panel + hint + debug `<pre>`), `src/style.css` (CSS gradient backdrop, `alpha:true` renderer).
 3. `src/config.js` constants; `src/sim/spring.js`, `islandShape.js`, `waveGrid.js` (pure JS) + `tests/sim.test.js`. Run `npm test`.
 4. Calibrate wave strengths and fear thresholds with a node script (see ARCHITECTURE#calibration). Do this *before* writing the visuals; peak heights must stay < ~0.5 or the sea escapes the case.
@@ -23,7 +23,7 @@ npm run smoke                                  # expects 13 PASS; screenshots in
 Look at `smoke-output/*.png`: the island with palms, players and sunbathers should be visible, the click screenshot should show a dent/ripples in the sea, and `fish fear` in the debug panel should be near 1.00 right after a click.
 
 ## 4. Gotchas hit while building (save yourself the time)
-- **Restricted networks.** If `npm`/`gh` are blocked in your sandbox, build where they work (e.g. the user's machine) and verify there. A browser harness without a bundler also works: serve `src/` directly with an import map mapping `three` -> `node_modules/three/build/three.module.js` and `three/addons/` -> `node_modules/three/examples/jsm/` (three 0.170 needs only those files plus OrbitControls/RoomEnvironment). Playwright's headless shell may lack system libs on minimal Linux (`libXdamage`...); use any machine with a working Chromium.
+- **Restricted networks.** If `npm`/`gh` are blocked in your sandbox, build where they work (e.g. the user's machine) and verify there. A browser harness without a bundler also works: serve `src/` directly with an import map mapping `three` -> `node_modules/three/build/three.module.js` and `three/addons/` -> `node_modules/three/examples/jsm/` (newer three splits the core into `three.core.js` too: serve both from `build/`). Playwright's headless shell may lack system libs on minimal Linux (`libXdamage`...); use any machine with a working Chromium.
 - **Software WebGL is slow** (~1-3 fps headless at 1280x800). Don't assert on wall-clock; use `window.__JELLY__.advance(seconds)`.
 - **Wave heights are cumulative.** A single click impulse at strength 0.45 produced 1.2-2.0 unit surface spikes; the shipped 0.06 gives ~0.35. Always read `maxAbsHeight()` as well as activity when tuning.
 - **`node --test tests/`** fails on Node 22 (treats the dir as a module); the script uses `tests/*.test.js`.
@@ -32,4 +32,4 @@ Look at `smoke-output/*.png`: the island with palms, players and sunbathers shou
 - **Person pose:** lying figures rotate the whole person group `-PI/2` about X (head toward -Z, facing up).
 
 ## 5. Environment this was built in
-macOS arm64, Node 24 (Linux VM shell reported Node 22), npm 10, three 0.170.0, vite 8.3.x. Browser checks ran in headless Chromium (software GL).
+macOS arm64, Node 24 (Linux VM shell reported Node 22), npm 10, three 0.186.1, vite 8.3.x, playwright-core 1.63. Browser checks ran in headless Chromium (software GL).
