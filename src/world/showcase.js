@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { CASE } from '../config.js';
 import { plaqueTexture, streakTexture, woodTexture, blobShadowTexture } from '../fx/textures.js';
 import { bake } from '../util/bake.js';
+import { DEFAULT_THEME, rel } from '../theme.js';
 
 /**
  * The museum-style display case: two-tier lacquered wood pedestal, brass trim and frame with corner finials,
@@ -58,16 +59,20 @@ export function createShowcase() {
   });
   const wallH = CASE.waterY - CASE.floorY;
   const wallGeo = new THREE.PlaneGeometry(H * 2 + 0.024, wallH, 1, 8);
-  { // light, clear turquoise at the surface -> denser deep blue at the bottom (RGBA vertex colours): reads as depth
-    const p = wallGeo.attributes.position, col = new Float32Array(p.count * 4), c = new THREE.Color();
-    const top = new THREE.Color(0x3cc0dc), bottom = new THREE.Color(0x0a5a96);
+  // light, clear turquoise at the surface -> denser deep blue at the bottom (RGBA vertex colours): reads as depth
+  wallGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(wallGeo.attributes.position.count * 4), 4));
+  const setWaterColor = (hex) => {
+    const p = wallGeo.attributes.position, col = wallGeo.attributes.color, c = new THREE.Color();
+    const top = rel(hex, DEFAULT_THEME.sea, 0x3cc0dc), bottom = rel(hex, DEFAULT_THEME.sea, 0x0a5a96);
     for (let i = 0; i < p.count; i++) {
       const t = p.getY(i) / wallH + 0.5; // 0 bottom .. 1 top
       c.copy(bottom).lerp(top, t);
-      col.set([c.r, c.g, c.b, 0.62 - 0.36 * t], i * 4);
+      col.setXYZW(i, c.r, c.g, c.b, 0.62 - 0.36 * t);
     }
-    wallGeo.setAttribute('color', new THREE.BufferAttribute(col, 4));
-  }
+    col.needsUpdate = true;
+  };
+  setWaterColor(DEFAULT_THEME.sea);
+  g.userData.setWaterColor = setWaterColor;
   const wo = H + 0.012;
   [[0, wo, 0], [wo, 0, Math.PI / 2], [0, -wo, Math.PI], [-wo, 0, -Math.PI / 2]].forEach(([cx, cz, ry]) => {
     const wall = new THREE.Mesh(wallGeo, waterMat);

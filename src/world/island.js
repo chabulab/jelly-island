@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CASE } from '../config.js';
 import { Spring } from '../sim/spring.js';
 import { islandHeight, LAYOUT } from '../sim/islandShape.js';
+import { DEFAULT_THEME, rel } from '../theme.js';
 
 const SIZE = CASE.half * 2;
 const SEG = 140;
@@ -49,27 +50,8 @@ export class Island {
     const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) pos.setY(i, islandHeight(pos.getX(i), pos.getZ(i)));
     const colors = new Float32Array(pos.count * 3);
-    const C = (h) => new THREE.Color(h);
-    const sandSea = C(0xc9b47e), sandWet = C(0xd6bd84), sandDry = C(0xf7e7b6), sandWarm = C(0xf1d9a0);
-    const grass = C(0x6cc152), grassDark = C(0x3f9a45), grassLight = C(0x9ad46a), deepTint = C(0x1f6f9f);
-    const c = new THREE.Color();
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), z = pos.getZ(i);
-      const h = islandHeight(x, z);
-      pos.setY(i, h);
-      const n = Math.sin(x * 7.1 + z * 3.3) * 0.5 + Math.sin(x * 2.3 - z * 5.9) * 0.5; // -1..1 fine noise
-      c.copy(sandSea).lerp(sandWet, smooth(h, -1.6, -0.1)).lerp(sandDry, smooth(h, -0.05, 0.2));
-      c.lerp(sandWarm, 0.35 * (0.5 + 0.5 * n) * smooth(h, 0.0, 0.3));                     // mottled dry sand
-      c.lerp(C(0xbfa06a), 0.45 * (1 - Math.abs(smooth(h, -0.09, 0.0) - smooth(h, 0.0, 0.06)))); // wet line
-      c.lerp(deepTint, 0.7 * smooth(-h, 0.15, 2.0));                                       // seen through water
-      const gd = Math.hypot(x - LAYOUT.grassCentre[0], z - LAYOUT.grassCentre[1]) + Math.sin(x * 3.3 + z * 2.1) * 0.18;
-      const gm = (1 - smooth(gd, LAYOUT.grassRadius - 0.45, LAYOUT.grassRadius)) * smooth(h, 0.3, 0.42);
-      c.lerp(grass, gm);
-      c.lerp(grassDark, gm * 0.4 * (0.5 + 0.5 * Math.sin(x * 5 + z * 4)));
-      c.lerp(grassLight, gm * 0.3 * (0.5 + 0.5 * n));
-      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
-    }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
 
@@ -86,10 +68,11 @@ export class Island {
     this.mesh.customDepthMaterial = depthMat;
 
     // ---- cut-away sides (static: the jiggle mask is 0 at the glass) ------------------------------------
-    this.skirt = new THREE.Mesh(skirtGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, side: THREE.DoubleSide }));
+    this.skirt = new THREE.Mesh(skirtGeometry(DEFAULT_THEME.sand), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, side: THREE.DoubleSide }));
     this.skirt.name = 'island-skirt';
     this.skirt.receiveShadow = true;
     this.mesh.add(this.skirt); // child so raycasts on the island include it; no transform of its own
+    this.setColors(DEFAULT_THEME);
 
     // own springs so a click on the island wobbles it independently of camera sloshing
     this.px = new Spring(70, 3.2); // shear in x
@@ -103,6 +86,34 @@ export class Island {
       this.pz.kick(-Math.sign(p.z || 1) * 0.35 * k);
       this.py.kick(-1.4 * k);                        // squash down, then spring back and overshoot
     });
+  }
+
+  /** Recolour sand, grass, underwater tint and the cut-away strata from the theme's base colours. */
+  setColors({ sand = DEFAULT_THEME.sand, grass = DEFAULT_THEME.grass, sea = DEFAULT_THEME.sea } = {}) {
+    const DS = DEFAULT_THEME.sand, DG = DEFAULT_THEME.grass, DW = DEFAULT_THEME.sea;
+    const sandSea = rel(sand, DS, 0xc4b27c), sandWet = rel(sand, DS, 0xd6bd84), sandDry = new THREE.Color(sand), sandWarm = rel(sand, DS, 0xf1d9a0);
+    const wetLine = rel(sand, DS, 0xbfa06a);
+    const grassC = new THREE.Color(grass), grassDark = rel(grass, DG, 0x3f9a45), grassLight = rel(grass, DG, 0x9ad46a);
+    const deepTint = rel(sea, DW, 0x1f6f9f);
+    const geo = this.mesh.geometry, pos = geo.attributes.position, col = geo.attributes.color, c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i), h = pos.getY(i);
+      const n = Math.sin(x * 7.1 + z * 3.3) * 0.5 + Math.sin(x * 2.3 - z * 5.9) * 0.5; // -1..1 fine noise
+      c.copy(sandSea).lerp(sandWet, smooth(h, -1.6, -0.1)).lerp(sandDry, smooth(h, -0.05, 0.2));
+      c.lerp(sandWarm, 0.35 * (0.5 + 0.5 * n) * smooth(h, 0.0, 0.3));                         // mottled dry sand
+      c.lerp(wetLine, 0.45 * (1 - Math.abs(smooth(h, -0.09, 0.0) - smooth(h, 0.0, 0.06))));    // wet line
+      c.lerp(deepTint, 0.7 * smooth(-h, 0.15, 2.0));                                           // seen through water
+      const gd = Math.hypot(x - LAYOUT.grassCentre[0], z - LAYOUT.grassCentre[1]) + Math.sin(x * 3.3 + z * 2.1) * 0.18;
+      const gm = (1 - smooth(gd, LAYOUT.grassRadius - 0.45, LAYOUT.grassRadius)) * smooth(h, 0.3, 0.42);
+      c.lerp(grassC, gm);
+      c.lerp(grassDark, gm * 0.4 * (0.5 + 0.5 * Math.sin(x * 5 + z * 4)));
+      c.lerp(grassLight, gm * 0.3 * (0.5 + 0.5 * n));
+      col.setXYZ(i, c.r, c.g, c.b);
+    }
+    col.needsUpdate = true;
+    const old = this.skirt.geometry;
+    this.skirt.geometry = skirtGeometry(sand);
+    old.dispose();
   }
 
   update(dt) {
@@ -124,10 +135,10 @@ export class Island {
  * Four vertical walls from the island's edge profile down to the seabed, coloured as layered sand strata
  * (a diorama cross-section). Normals face outward toward the glass.
  */
-function skirtGeometry() {
+function skirtGeometry(sand = DEFAULT_THEME.sand) {
   const H = CASE.half, floor = CASE.floorY;
   const N = SEG, ROWS = 18;
-  const strata = [0xf4dc9c, 0xe0b97a, 0xc99a60, 0xb07e4e, 0x8f6440, 0x76533a, 0x5f4433].map((h) => new THREE.Color(h));
+  const strata = [0xf4dc9c, 0xe0b97a, 0xc99a60, 0xb07e4e, 0x8f6440, 0x76533a, 0x5f4433].map((h) => rel(sand, DEFAULT_THEME.sand, h));
   const pos = [], nor = [], col = [], idx = [];
   const sides = [
     { p: (s) => [s, H], n: [0, 0, 1] },

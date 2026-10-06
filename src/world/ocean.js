@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CASE, WAVE } from '../config.js';
 import { WaveGrid } from '../sim/waveGrid.js';
 import { islandHeight } from '../sim/islandShape.js';
+import { DEFAULT_THEME, rel } from '../theme.js';
 
 const SIZE = CASE.half * 2;
 
@@ -31,23 +32,17 @@ export class Ocean {
     this.baseZ = new Float32Array(this.count);
     this.mask = new Float32Array(this.count);
     this.baseColor = new Float32Array(this.count * 3);
-    const colors = new Float32Array(this.count * 3);
-    const shallow = new THREE.Color(0x46d9cf), mid = new THREE.Color(0x1fa3d0), deep = new THREE.Color(0x0f5fb0);
-    const foam = new THREE.Color(0xffffff);
-    const c = new THREE.Color();
+    this.depth = new Float32Array(this.count);
     for (let i = 0; i < this.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       this.baseX[i] = x; this.baseZ[i] = z;
       const edge = Math.min(CASE.half - Math.abs(x), CASE.half - Math.abs(z));
       this.mask[i] = THREE.MathUtils.smoothstep(edge, 0, 0.9);
-      const depth = -islandHeight(x, z);
-      c.copy(shallow).lerp(mid, THREE.MathUtils.smoothstep(depth, 0.0, 0.9)).lerp(deep, THREE.MathUtils.smoothstep(depth, 0.9, 2.4));
-      c.lerp(foam, 1 - THREE.MathUtils.smoothstep(depth, -0.25, 0.22)); // white foam line along the shore
-      this.baseColor[i * 3] = c.r; this.baseColor[i * 3 + 1] = c.g; this.baseColor[i * 3 + 2] = c.b;
-      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+      this.depth[i] = -islandHeight(x, z);
     }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(this.count * 3), 3));
     this.colorAttr = geo.attributes.color;
+    this.setSeaColor(DEFAULT_THEME.sea);
 
     this.material = new THREE.MeshPhysicalMaterial({
       vertexColors: true,
@@ -73,6 +68,21 @@ export class Ocean {
     });
 
     this._rotAcc = 0;
+  }
+
+  /** Rebuild the depth-based palette (shallow -> mid -> deep, white foam at the shore) from one base colour. */
+  setSeaColor(hex) {
+    const D = DEFAULT_THEME.sea;
+    const mid = new THREE.Color(hex), shallow = rel(hex, D, 0x46d9cf), deep = rel(hex, D, 0x0f5fb0);
+    const foam = new THREE.Color(0xffffff), c = new THREE.Color(), S = THREE.MathUtils.smoothstep;
+    for (let i = 0; i < this.count; i++) {
+      const depth = this.depth[i];
+      c.copy(shallow).lerp(mid, S(depth, 0.0, 0.9)).lerp(deep, S(depth, 0.9, 2.4));
+      c.lerp(foam, 1 - S(depth, -0.25, 0.22)); // white foam line along the shore
+      this.baseColor[i * 3] = c.r; this.baseColor[i * 3 + 1] = c.g; this.baseColor[i * 3 + 2] = c.b;
+      this.colorAttr.setXYZ(i, c.r, c.g, c.b);
+    }
+    this.colorAttr.needsUpdate = true;
   }
 
   update(dt, t) {

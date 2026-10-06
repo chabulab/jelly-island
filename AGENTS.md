@@ -13,7 +13,7 @@ Read `README.md`, then `docs/ARCHITECTURE.md`. Short version:
 4. **Interactions go through `JellyState`.** New reactive objects subscribe with `jelly.onImpulse(...)` and read the shared springs (`sx, sz, sy`, `rotationSpeed`, `strength`). Don't add a second pointer/camera listener.
 5. **No binary assets.** Textures are canvas-drawn (`src/fx/textures.js`), geometry is procedural. Keep the repo tiny and reproducible.
 6. **Coordinates:** Y up, sea level y=0, seabed y=-2.4, case is 10x10 centred on the origin. See `src/config.js`.
-7. Verify visually, not just by build success: run the smoke test and look at the screenshots in `smoke-output/` (git-ignored).
+7. Verify visually, not just by build success: follow `docs/VISUAL-QA.md` (render `npm run qa:views`, inspect each view against its checklist, fix, re-render, then `npm run smoke` and `npm run qa:perf`). Add new findings to its case log.
 8. **Keep draw calls low.** Build detailed props from primitives, then merge static parts with `bake()` from `src/util/bake.js` (`deep: false` inside animation rigs). Use `InstancedMesh` for many identical things (see grass tufts).
 9. **No hollow geometry behind glass.** Anything visible through the water walls must be closed (see the island skirt). Jiggle must fade to 0 at the walls.
 10. **Seeded randomness only** (`src/util/rng.js`) for layouts, so every load looks the same and screenshots are comparable.

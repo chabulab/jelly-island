@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "test": "node --test tests/*.test.js",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "node scripts/smoke-test.mjs",
+    "qa:views": "node scripts/views.mjs",
+    "qa:perf": "node scripts/perf-probe.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

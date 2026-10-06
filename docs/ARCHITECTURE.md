@@ -58,6 +58,7 @@ Sunbathers lie on rounded towels with a pillow roll (one knee up / hands behind 
 
 ### Fish (`src/world/fish.js`)
 18 fish, 4 species with markings painted into vertex colours (clownfish bands with black edges, blue tang with dark saddle and yellow tail, butterflyfish eye band and tail spot, pink anthias gradient with a gold streak). Body: flattened lathe; forked tail, dorsal and anal fins from 2D shapes; flapping pectoral fins; eyes with pupils and glints. Body + dorsal + anal are baked into one mesh, each eye into one mesh.
+Fish spawn at seeded positions in open water only (ground below -1.0, between the ground and the surface), so nothing starts on the island.
 Steering = wander + heading inertia + loose schooling with 3 deterministic neighbours + preferred depth + island avoidance (look-ahead using the island height field gradient) + wall avoidance + stay under the surface.
 Fear per fish: `target = smoothstep(activity, FEAR.calm, FEAR.panic)`; rises fast (rate 5), decays slowly (0.35). Clicks also startle fish within reach (burst away and down). Fear effects: max speed 0.55 -> 2.7, tail and pectoral beat faster, eyes x1.55, body blanches (emissive), dive to the bottom, head toward the island centre (shelter on its flanks), flee from the last click point, panicky jitter.
 
@@ -67,6 +68,15 @@ Seeded (`util/rng.js`) so the layout is identical every load. Shoreline rocks (j
 ### Showcase (`src/world/showcase.js`)
 Two-tier lacquered wood pedestal (canvas wood-grain texture, clearcoat), brass bands, a dark deck inside the glass 2 cm below the seabed, 4 rounded plaques with brass screws, transparent glass box (no depth write) with additive streak planes as fake reflections, a brass frame of rounded bars with ball finials (baked into one mesh), water-box wall planes with a turquoise-to-deep-blue vertical gradient, a shadow-catching floor plus a soft radial contact shadow. Render order: walls 1, ocean 2, glass 3, streaks 4.
 
+### Colour theme (`src/theme.js`, pickers in `index.html`)
+Four base colours (`sea`, `sand`, `grass`, `sky`). Every derived shade is defined *relative* to a base with
+`rel(base, DEFAULT.base, originalShade)`: it keeps the HSL offset the hand-tuned shade had from the default base,
+so the defaults reproduce the original look exactly and any picked colour gets a matching palette.
+Recolouring hooks: `ocean.setSeaColor`, `showcase.userData.setWaterColor`, `island.setColors({sand, grass, sea})`
+(surface + strata skirt + underwater tint), `props.setGrassColor` (instanced tufts), CSS variables
+`--sky-core/--sky-mid/--sky-edge` for the page gradient. Choices persist in `localStorage` (best effort);
+`window.__JELLY__.setColors({...})` does the same from scripts.
+
 ### Utilities
 - `util/bake.js` - `bake(root, opts)` merges static child meshes into one mesh, baking each material colour into vertex colours. Use `deep: false` for animation rigs so child pivots stay separate. Cuts the scene from ~820 to ~360 meshes.
 - `util/rng.js` - seeded PRNG (mulberry32) with `range` and `pick`.
@@ -75,7 +85,7 @@ Two-tier lacquered wood pedestal (canvas wood-grain texture, clearcoat), brass b
 - `PCFSoftShadowMap` was removed in r186: we use `PCFShadowMap` + `shadow.radius`.
 - `THREE.Clock` is deprecated since r183: the loop uses `THREE.Timer` (`timer.update(now)`).
 - Lights: hemisphere + shadow-casting sun + a cool fill light from the opposite side; RoomEnvironment for reflections.
-- Budget: ~420 draw calls, ~185k triangles. Fine on any discrete/Apple GPU; software GL (headless CI) renders ~1 frame/s, which is why tests use `__JELLY__.advance()`.
+- Budget: ~620 draw calls per frame including the shadow-map pass (~365 meshes), ~190k triangles. Measure with `npm run qa:perf`. Fine on any discrete/Apple GPU; software GL (headless CI) renders ~1 frame/s, which is why tests use `__JELLY__.advance()`.
 
 ## Calibration
 Fear thresholds depend on wave constants. Method used (node, no browser): build `WaveGrid(96, 10, isSolid)`, apply `ripple(...)`, step at 60 Hz, record peak `maxAbsHeight()` and `activity`. Results with the shipped constants:
@@ -90,4 +100,4 @@ So `FEAR.calm = 0.0003`, `FEAR.panic = 0.0014`. If you change `WAVE.*` or ripple
 
 ## Testing
 - `npm test` - pure-Node tests: spring settles, island shape sanity, click scares fish then decays, solid cells pinned.
-- `npm run smoke` - Chromium E2E, 14 checks: loads without console errors or three.js deprecation warnings, click on open water hits the ocean, activity/fear rise and decay, wave height sane, island squashes, palms bend, people not under the island in the scene graph, orbit registers. Writes `smoke-output/*.png`.
+- `npm run smoke` - Chromium E2E, 16 checks (incl. fish start in open water, colour pickers recolour + reset): loads without console errors or three.js deprecation warnings, click on open water hits the ocean, activity/fear rise and decay, wave height sane, island squashes, palms bend, people not under the island in the scene graph, orbit registers. Writes `smoke-output/*.png`.

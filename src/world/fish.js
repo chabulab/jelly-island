@@ -118,8 +118,16 @@ class Fish {
     this.tail.children[0].castShadow = false;
 
     const rand = rng(500 + i); // seeded: same starting school every load
-    const a = rand() * Math.PI * 2, r = 1.5 + rand() * 3;
-    this.pos = new THREE.Vector3(Math.cos(a) * r, THREE.MathUtils.lerp(FISH.minY + 0.3, FISH.maxY - 0.2, rand()), Math.sin(a) * r);
+    // spawn in open water: pick a spot deep enough for a fish, then a height between the ground and the surface
+    let x = 0, z = 0, ground = 0;
+    for (let k = 0; k < 200; k++) {
+      x = (rand() * 2 - 1) * (FISH.bound - 0.5);
+      z = (rand() * 2 - 1) * (FISH.bound - 0.5);
+      ground = islandHeight(x, z);
+      if (ground < -1.0) break;
+    }
+    const yLo = Math.max(FISH.minY + 0.1, ground + 0.45), yHi = FISH.maxY - 0.15;
+    this.pos = new THREE.Vector3(x, THREE.MathUtils.lerp(yLo, Math.max(yLo, yHi), rand()), z);
     this.vel = new THREE.Vector3(rand() - 0.5, 0, rand() - 0.5).normalize().multiplyScalar(0.5);
     this.phase = rand() * 100;
     this.wag = rand() * 6;

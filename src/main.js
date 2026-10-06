@@ -10,6 +10,8 @@ import { Palms } from './world/palms.js';
 import { createPeople } from './world/people.js';
 import { FishSchool } from './world/fish.js';
 import { Props } from './world/props.js';
+import { DEFAULT_THEME, loadTheme, saveTheme, rel } from './theme.js';
+import { islandHeight } from './sim/islandShape.js';
 
 const canvas = document.getElementById('stage');
 const params = new URLSearchParams(location.search);
@@ -106,6 +108,30 @@ const ctlJelly = document.getElementById('ctl-jelly');
 const ctlRotate = document.getElementById('ctl-rotate');
 ctlJelly.addEventListener('input', () => { jelly.strength = parseFloat(ctlJelly.value); });
 ctlRotate.addEventListener('change', () => { controls.autoRotate = ctlRotate.checked; });
+// Colour pickers: sea, sand, grass, sky. Choices are remembered per browser (localStorage, best effort).
+const pickers = { sea: 'col-sea', sand: 'col-sand', grass: 'col-grass', sky: 'col-sky' };
+let theme = loadTheme();
+function applyTheme(t) {
+  ocean.setSeaColor(t.sea);
+  showcase.userData.setWaterColor(t.sea);
+  island.setColors(t);
+  props.setGrassColor(t.grass);
+  const css = document.documentElement.style;
+  css.setProperty('--sky-mid', t.sky);
+  css.setProperty('--sky-edge', '#' + rel(t.sky, DEFAULT_THEME.sky, 0x8cc9e8).getHexString());
+  css.setProperty('--sky-core', '#' + rel(t.sky, DEFAULT_THEME.sky, 0xfff6df).getHexString());
+  for (const [k, id] of Object.entries(pickers)) document.getElementById(id).value = t[k];
+}
+for (const [k, id] of Object.entries(pickers)) {
+  document.getElementById(id).addEventListener('input', (e) => {
+    theme = { ...theme, [k]: e.target.value };
+    applyTheme(theme);
+    saveTheme(theme);
+  });
+}
+document.getElementById('col-reset').addEventListener('click', () => { theme = { ...DEFAULT_THEME }; applyTheme(theme); saveTheme(theme); });
+applyTheme(theme);
+
 const hint = document.querySelector('.hint');
 function hideHint() { hint.classList.add('hide'); }
 setTimeout(hideHint, 12000);
@@ -157,7 +183,7 @@ function frame(now) {
 // Test / agent hook: lets scripts/smoke-test.mjs and other agents drive and inspect the scene.
 window.__JELLY__ = {
   ready: true,
-  THREE, renderer, scene, camera, controls, jelly, ocean, island, palms, fish, people, props,
+  THREE, islandHeight, renderer, scene, camera, controls, jelly, ocean, island, palms, fish, people, props,
   /** Advance the simulation `seconds` without rendering (deterministic tests; slow software GL can't keep real time). */
   advance(seconds, step = 1 / 60) {
     for (let i = 0; i < Math.round(seconds / step); i++) {
@@ -165,6 +191,8 @@ window.__JELLY__ = {
       ocean.update(step, simTime); island.update(step); palms.update(step, simTime); people.update(simTime); fish.update(step, simTime); props.update(step, simTime);
     }
   },
+  /** Set colours programmatically, e.g. setColors({ sea: '#ff66aa' }) (same as the pickers). */
+  setColors: (partial) => { theme = { ...theme, ...partial }; applyTheme(theme); return theme; },
   poke,                                   // poke(clientX, clientY) => {kind, point}
   pokeWorld: (x, y, z, kind = 'ocean', s = 1) => jelly.impulse(new THREE.Vector3(x, y, z), s, kind, null),
   state: () => ({

@@ -32,6 +32,11 @@ page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(`${URL}/?debug=1`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__JELLY__?.ready, null, { timeout: 30000 });
 const state = () => page.evaluate(() => window.__JELLY__.state());
+// fish must START in open water (not on the island sliding down)
+const fishStart = await page.evaluate(() => {
+  const J = window.__JELLY__;
+  return J.fish.fish.map((f) => ({ y: f.pos.y, ground: J.islandHeight(f.pos.x, f.pos.z) }));
+});
 const wait = (ms) => page.waitForTimeout(ms);
 const results = [];
 const check = (name, ok, info = '') => { results.push({ name, ok }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name} ${info}`); };
@@ -40,6 +45,8 @@ await wait(800);
 await page.screenshot({ path: `${out}/1-idle.png` });
 const idle = await state();
 check('idle sea is calm', idle.seaActivity < 0.0003, JSON.stringify(idle));
+check('fish start in open water', fishStart.every((f) => f.y < -0.25 && f.ground < -0.5 && f.y > f.ground + 0.1),
+  fishStart.filter((f) => !(f.y < -0.25 && f.ground < -0.5 && f.y > f.ground + 0.1)).length + ' misplaced');
 check('fish relaxed at idle', idle.fishFear < 0.15, `fear=${idle.fishFear.toFixed(2)}`);
 
 // Software GL renders slowly, so time-based checks use J.advance(seconds) (simulation without rendering).
@@ -89,6 +96,19 @@ await page.mouse.up();
 check('orbiting registers as rotation', rot.rotationSpeed > 0.3, `rot=${rot.rotationSpeed.toFixed(2)}`);
 
 await wait(1000);
+// colour pickers: changing the sea colour recolours the ocean, reset restores it
+const colours = await page.evaluate(() => {
+  const J = window.__JELLY__, b = J.ocean.baseColor;           // the palette (colorAttr also has per-frame crest light)
+  const i = J.ocean.depth.findIndex((d) => d > 1.5);            // a deep-water vertex
+  const sample = () => [b[i * 3], b[i * 3 + 1], b[i * 3 + 2]].map((v) => +v.toFixed(3)).join(',');
+  const before = sample();
+  J.setColors({ sea: '#ff3366', sand: '#ffffff', grass: '#aa66ff', sky: '#ffd0e0' });
+  const changed = sample();
+  document.getElementById('col-reset').click();
+  return { before, changed, after: sample(), skyVar: getComputedStyle(document.documentElement).getPropertyValue('--sky-mid').trim() };
+});
+check('colour pickers recolour the scene and reset restores it', colours.before !== colours.changed && colours.before === colours.after && colours.skyVar === '#cdeeff', JSON.stringify(colours));
+
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 check('no three.js deprecation warnings', warnings.length === 0, warnings.slice(0, 3).join(' | '));
 await browser.close();

@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { islandHeight, LAYOUT } from '../sim/islandShape.js';
 import { rng } from '../util/rng.js';
 import { bake } from '../util/bake.js';
+import { DEFAULT_THEME, rel } from '../theme.js';
 
 /**
  * Set dressing that makes the diorama feel finished: shoreline rocks, grass tufts, flowering bushes,
@@ -99,6 +100,7 @@ export class Props {
     });
     tufts.receiveShadow = true;
     G.add(tufts);
+    this.tufts = tufts;
 
     // ---------------- flowering bushes ----------------
     const leafMat = vcol({ roughness: 0.7 });
@@ -275,6 +277,14 @@ export class Props {
     // Everything above except seaweed, the flag and the instanced grass is static: merge into one draw call.
     const animated = new Set([this.flag, ...this.weeds.map((w) => w.m)]);
     bake(G, { filter: (m) => !animated.has(m), name: 'props-static' });
+  }
+
+  /** Grass tufts: dark base -> light tip, derived from the theme's grass colour. */
+  setGrassColor(hex) {
+    const dark = rel(hex, DEFAULT_THEME.grass, 0x3d8a3a), light = rel(hex, DEFAULT_THEME.grass, 0xa6dc6a);
+    const col = this.tufts.geometry.attributes.color;
+    for (let i = 0; i < col.count; i++) { const c = i % 3 === 2 ? light : dark; col.setXYZ(i, c.r, c.g, c.b); }
+    col.needsUpdate = true;
   }
 
   update(dt, t) {
