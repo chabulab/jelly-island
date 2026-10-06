@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { islandHeight, LAYOUT } from '../sim/islandShape.js';
+import { CASE } from '../config.js';
 import { rng } from '../util/rng.js';
 import { bake } from '../util/bake.js';
 import { DEFAULT_THEME, rel } from '../theme.js';
@@ -25,10 +26,30 @@ function colorize(g, fn) {
   return g;
 }
 
-/** Walk outward from the centre along an angle until the ground drops to `level`. */
-function radiusAtLevel(angle, level) {
-  for (let r = 1.2; r < 5; r += 0.01) if (islandHeight(Math.cos(angle) * r, Math.sin(angle) * r) < level) return r;
-  return 5;
+/** True if (x, z) is inside the water box with `margin` to spare (props must never cross the glass). */
+export const insideCase = (x, z, margin) => Math.abs(x) <= CASE.half - margin && Math.abs(z) <= CASE.half - margin;
+
+/**
+ * Walk outward from the centre along `angle` until the ground drops to `level`.
+ * Returns null if the case wall (minus `margin`) comes first: in some directions the island never gets
+ * that deep before the glass, and the old version then returned the wall itself (props half outside).
+ */
+function radiusAtLevel(angle, level, margin = 0.3) {
+  for (let r = 1.2; r < CASE.half * 1.5; r += 0.01) {
+    const x = Math.cos(angle) * r, z = Math.sin(angle) * r;
+    if (!insideCase(x, z, margin)) return null;
+    if (islandHeight(x, z) < level) return r;
+  }
+  return null;
+}
+
+/** A point at ground `level`, trying `angle` first and then random angles; always inside the case. */
+function spotAtLevel(r, level, margin, angle = r.range(0, Math.PI * 2)) {
+  for (let k = 0; k < 64; k++, angle = r.range(0, Math.PI * 2)) {
+    const rad = radiusAtLevel(angle, level, margin);
+    if (rad !== null) return [Math.cos(angle) * rad, Math.sin(angle) * rad, angle];
+  }
+  throw new Error(`no spot at level ${level} inside the case`);
 }
 const onGround = (obj, x, z, lift = 0) => { obj.position.set(x, islandHeight(x, z) + lift, z); return obj; };
 
@@ -53,7 +74,8 @@ export class Props {
     for (let i = 0; i < 9; i++) {
       const a = (i / 9) * Math.PI * 2 + r.range(-0.25, 0.25);
       if (Math.abs(a % (Math.PI * 2) - 1.57) < 0.5) continue; // keep the front beach (court side) open
-      const rad = radiusAtLevel(a, r.range(-0.05, 0.12));
+      const [rx, rz, ra] = spotAtLevel(r, r.range(-0.05, 0.12), 0.6, a);
+      const rad = Math.hypot(rx, rz);
       const size = r.range(0.09, 0.2);
       const g = new THREE.IcosahedronGeometry(size, 1);
       const p = g.attributes.position;
@@ -61,12 +83,12 @@ export class Props {
       g.computeVertexNormals();
       colorize(g, (c, x, y) => c.set(0x8d8a80).lerp(new THREE.Color(0xb7b0a0), THREE.MathUtils.smoothstep(y, -size * 0.3, size * 0.6)));
       const m = add(new THREE.Mesh(g, rockMat));
-      onGround(m, Math.cos(a) * rad, Math.sin(a) * rad, -size * 0.25);
+      onGround(m, rx, rz, -size * 0.25);
       m.rotation.set(r.range(-0.3, 0.3), r.range(0, 6.28), r.range(-0.3, 0.3));
       // a smaller buddy rock
       const m2 = add(new THREE.Mesh(g, rockMat));
       m2.scale.setScalar(r.range(0.4, 0.6));
-      onGround(m2, Math.cos(a + 0.06) * (rad + 0.18), Math.sin(a + 0.06) * (rad + 0.18), -size * 0.15);
+      onGround(m2, Math.cos(ra + 0.06) * (rad + 0.18), Math.sin(ra + 0.06) * (rad + 0.18), -size * 0.15);
     }
 
     // ---------------- grass tufts (instanced) ----------------
@@ -138,8 +160,7 @@ export class Props {
       (c, x, y, z) => c.set(0xfbe6dc).lerp(new THREE.Color(0xf0a98f), 0.5 + 0.5 * Math.sin(Math.atan2(z, x) * 9)));
     const shellMat = vcol({ roughness: 0.4 });
     for (let i = 0; i < 16; i++) {
-      const a = r.range(0, Math.PI * 2), rad = radiusAtLevel(a, r.range(0.04, 0.3));
-      const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+      const [x, z] = spotAtLevel(r, r.range(0.04, 0.3), 0.15);
       if (x > -1.3 && x < 1.3 && z > 0.6 && z < 2.0) continue; // not on the court
       const star = i % 4 === 0;
       const m = add(new THREE.Mesh(star ? starGeo : shellGeo, star ? std(r.pick([0xff7a3d, 0xf05d7a, 0xffa94d]), { roughness: 0.6 }) : shellMat), false);
@@ -148,9 +169,9 @@ export class Props {
       if (star) m.scale.setScalar(r.range(0.8, 1.2));
     }
     for (let i = 0; i < 6; i++) { // starfish on the seabed
-      const a = r.range(0, Math.PI * 2), rad = radiusAtLevel(a, r.range(-1.7, -0.9));
+      const [x, z] = spotAtLevel(r, r.range(-1.7, -0.9), 0.2);
       const m = add(new THREE.Mesh(starGeo, std(r.pick([0xff7a3d, 0x9b5de5, 0xf05d7a]), { roughness: 0.6 })), false);
-      onGround(m, Math.cos(a) * rad, Math.sin(a) * rad, 0.006);
+      onGround(m, x, z, 0.006);
       m.rotation.y = r.range(0, 6.28);
       m.scale.setScalar(1.3);
     }
@@ -207,9 +228,7 @@ export class Props {
     // ---------------- underwater garden ----------------
     const coralCols = [0xff7f9e, 0xff9f43, 0xb06cf0, 0xff5e78, 0x58d6c4];
     for (let i = 0; i < 13; i++) {
-      const a = (i / 13) * Math.PI * 2 + r.range(-0.2, 0.2);
-      const rad = radiusAtLevel(a, r.range(-1.8, -0.9));
-      const cx = Math.cos(a) * rad, cz = Math.sin(a) * rad;
+      const [cx, cz, a] = spotAtLevel(r, r.range(-1.8, -0.9), 0.5, (i / 13) * Math.PI * 2 + r.range(-0.2, 0.2));
       const cluster = onGround(new THREE.Group(), cx, cz, -0.02);
       const kind = i % 3, colr = std(coralCols[i % coralCols.length], { roughness: 0.6 });
       if (kind === 0) { // branching
@@ -259,8 +278,8 @@ export class Props {
     this.weeds = [];
     const weedMat = vcol({ side: THREE.DoubleSide, roughness: 0.6 });
     for (let i = 0; i < 18; i++) {
-      const a = r.range(0, Math.PI * 2), rad = radiusAtLevel(a, r.range(-1.9, -1.1));
-      const x = Math.cos(a) * rad, z = Math.sin(a) * rad, y0 = islandHeight(x, z);
+      const [x, z] = spotAtLevel(r, r.range(-1.9, -1.1), 0.25);
+      const y0 = islandHeight(x, z);
       const L = Math.min(r.range(0.4, 0.8), -y0 - 0.35);
       if (L < 0.2) continue;
       const g = new THREE.PlaneGeometry(0.045, L, 1, 12).translate(0, L / 2, 0);

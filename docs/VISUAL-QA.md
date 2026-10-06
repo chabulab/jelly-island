@@ -52,6 +52,7 @@ Each view exists to expose a specific class of problem. Users can't reach some o
 - Can you see *into* or *through* anything that should be solid? (height fields, open cylinders, single-sided planes seen from behind)
 - Flickering stripes or "chain-link" patterns on flat areas = two coplanar surfaces (z-fighting). Separate them by >= 1-2 cm.
 - Objects floating above or sunk into the ground; things poking through glass or water walls while jiggling.
+- Anything crossing the glass. This one is automated: `tests/containment.test.js` (props, palms) and the smoke check *everything stays inside the glass case* compare every mesh's world bounding box with the water box. Placement code must use `spotAtLevel()` / `insideCase()` in `props.js`, never a raw radius that can reach the wall.
 - Anything that animates must stay sealed where it touches something static (fade the motion to 0 at the contact).
 
 **Scale and proportion**
@@ -113,4 +114,5 @@ under ~5 ms. On software GL compare the *relative* numbers only.
 | Warnings after the three r186 upgrade | console | `PCFSoftShadowMap` removed, `Clock` deprecated | `PCFShadowMap` + radius, `THREE.Timer`; smoke test now fails on such warnings |
 | ~820 meshes after adding detail | perf-probe | many tiny single-colour meshes | `util/bake.js` -> ~360 meshes |
 | fps readout always >= 20 | debug panel | fps computed from clamped physics dt | use real elapsed time |
+| Seashells / starfish / corals half outside the case (reported by the owner) | corner, side | `radiusAtLevel()` returned the wall radius when the island never reached the wanted depth in that direction | placement retries other angles and keeps a margin from the glass; containment unit test + smoke check |
 | Fish on the island at load, sliding down into the sea | first seconds after load (reported by the owner) | spawn ring overlapped the island; the ground clamp then pushed them onto the sand | seeded rejection sampling in open water; smoke check "fish start in open water" |

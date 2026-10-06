@@ -109,6 +109,21 @@ const colours = await page.evaluate(() => {
 });
 check('colour pickers recolour the scene and reset restores it', colours.before !== colours.changed && colours.before === colours.after && colours.skyVar === '#cdeeff', JSON.stringify(colours));
 
+// nothing in the diorama may cross the glass: every mesh outside the showcase group must fit the water box
+const outside = await page.evaluate(() => {
+  const J = window.__JELLY__, T = J.THREE, half = 5 + 0.02, bad = [];
+  const showcase = J.scene.getObjectByName('showcase');
+  J.scene.updateMatrixWorld(true);
+  J.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    for (let p = o; p; p = p.parent) if (p === showcase) return;
+    const b = new T.Box3().setFromObject(o, true);
+    if (b.min.x < -half || b.max.x > half || b.min.z < -half || b.max.z > half) bad.push(o.name || o.geometry.type);
+  });
+  return bad;
+});
+check('everything stays inside the glass case', outside.length === 0, outside.slice(0, 5).join(', '));
+
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 check('no three.js deprecation warnings', warnings.length === 0, warnings.slice(0, 3).join(' | '));
 await browser.close();

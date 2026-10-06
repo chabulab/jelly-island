@@ -15,7 +15,7 @@ Read `README.md`, then `docs/ARCHITECTURE.md`. Short version:
 6. **Coordinates:** Y up, sea level y=0, seabed y=-2.4, case is 10x10 centred on the origin. See `src/config.js`.
 7. Verify visually, not just by build success: follow `docs/VISUAL-QA.md` (render `npm run qa:views`, inspect each view against its checklist, fix, re-render, then `npm run smoke` and `npm run qa:perf`). Add new findings to its case log.
 8. **Keep draw calls low.** Build detailed props from primitives, then merge static parts with `bake()` from `src/util/bake.js` (`deep: false` inside animation rigs). Use `InstancedMesh` for many identical things (see grass tufts).
-9. **No hollow geometry behind glass.** Anything visible through the water walls must be closed (see the island skirt). Jiggle must fade to 0 at the walls.
+9. **No hollow geometry behind glass, nothing through the glass.** Anything visible through the water walls must be closed (see the island skirt); jiggle fades to 0 at the walls. Place props with `spotAtLevel()` / `insideCase()`; `tests/containment.test.js` fails if any mesh crosses the water box.
 10. **Seeded randomness only** (`src/util/rng.js`) for layouts, so every load looks the same and screenshots are comparable.
 11. Keep docs in sync: if behaviour or constants change, update `docs/ARCHITECTURE.md` in the same commit.
 
