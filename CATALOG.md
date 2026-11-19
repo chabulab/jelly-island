@@ -136,8 +136,6 @@ the pure simulation.
 
 ## Related projects
 
-- `crack-bloom` is the sibling three.js scene, with the same Vite + vanilla JS
-  structure, a test hook, QA views, a smoke test and the no-binary-assets rule.
 - `quick-mosaic` is the other visual experiment, but it uses Canvas 2D and a
   React UI.
 - `chabulab-tools` hosts the maintained browser tools; no code is shared.
